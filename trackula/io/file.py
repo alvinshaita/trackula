@@ -19,3 +19,8 @@ def split_audio_data(path: str) -> Tuple[bytes, bytes]:
 			audio_bytes = f.read()
 
 	return tag_bytes, audio_bytes
+
+
+def write_audio_file(path: str, tag_bytes: bytes, audio_bytes: bytes):
+	with open(path, "wb") as f:
+		f.write(tag_bytes + audio_bytes)
