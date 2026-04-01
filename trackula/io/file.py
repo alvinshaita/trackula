@@ -1,5 +1,5 @@
 from typing import Tuple
-from ..id3.buffer import decode_synchsafe
+from ..id3.buffer import decode_int
 
 def split_audio_data(path: str) -> Tuple[bytes, bytes]:
 	with open(path, "rb") as f:
@@ -9,12 +9,12 @@ def split_audio_data(path: str) -> Tuple[bytes, bytes]:
 			# I'm assuming frames start after exactly 10 bytes meant for headers
 			# TODO: Include check for extended headers
 
-			# flags = header[5]
+			flags = header[5]
 			# has_extended_header = bool(flags & 0x40)
 
-			encoded_tag_size = header[6:10]
+			size_bytes = header[6:10]
 			# ID3 tag size is ALWAYS synchsafe (v2.3 + v2.4)
-			tag_size = decode_synchsafe(encoded_tag_size)
+			tag_size = decode_int(size_bytes, synchsafe=True)
 			f.seek(0)
 			tag_bytes = f.read(10 + tag_size)
 			audio_bytes = f.read()

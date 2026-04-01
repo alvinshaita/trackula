@@ -1,11 +1,12 @@
-from .buffer import decode_synchsafe
+from .buffer import decode_int
 from .text import decode_text
 
 def parse_id3(data: bytes):
 	header = parse_header(data[:10])
 	
-	body = data[10:10+header["size"]]
-	frames = parse_frames(body)
+	# TODO: extended headers awareness
+	frames_body = data[10:10+header["size"]]
+	frames = parse_frames(frames_body, header["version"])
 
 	return {
 		"header": header,
@@ -27,7 +28,8 @@ def parse_header(data: bytes):
 	version = data[3]
 	revision = data[4]
 	flags = data[5]
-	size = decode_synchsafe(data[6:10])
+	size_bytes = data[6:10]
+	size = decode_int(size_bytes, synchsafe=True)
 
 	return {
 		"version": version,
@@ -37,7 +39,7 @@ def parse_header(data: bytes):
 	}
 
 
-def parse_frames(data: bytes):
+def parse_frames(data: bytes, version: int):
 	# each frame consists of a frame header followed by the actual frame data
 	# frame header (10 bytes in v2.3 and v2.4)
 	# frame id: 4 bytes - unique identifier eg. TIT2 (Title), TPE1 (Artist)
@@ -55,10 +57,13 @@ def parse_frames(data: bytes):
 			break
 
 		frame_id = header[:4].decode("latin1")
-		size = int.from_bytes(header[4:8], "big")
+		size_bytes = header[4:8]
+		if version == 4:
+			size = decode_int(size_bytes, synchsafe=True)
+		else:
+			size = decode_int(size_bytes, synchsafe=False)
 
 		frame_data = data[offset + 10: offset + 10 + size]
-
 		if frame_id.startswith("T"):
 			frames[frame_id] = decode_text(frame_data)
 		else:
