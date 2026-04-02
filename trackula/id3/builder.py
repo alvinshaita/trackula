@@ -3,9 +3,9 @@ from .text import encode_text
 
 def build_id3(frames, version=4):
 	frame_bytes = build_frames(frames, version=version)
-
 	frames_size = len(frame_bytes)
 	id3_header = build_header(frames_size, version=version)
+	
 	id3_content = id3_header + frame_bytes
 	return id3_content
 
@@ -22,13 +22,13 @@ def build_text_frame(frame_id, frame_data, version=4):
 	if frame_id.startswith("T"):
 		encoded_frame_data = encode_text(frame_data, 1)
 	else:
-		print(frame_id, frame_data[0:20], "======")
 		encoded_frame_data = frame_data
 
+	size_bytes = len(encoded_frame_data)
 	if version == 4:
-		size = encode_int(len(encoded_frame_data), synchsafe=True)
+		size = encode_int(size_bytes, synchsafe=True)
 	else:
-		size = encode_int(len(encoded_frame_data), synchsafe=False)
+		size = encode_int(size_bytes, synchsafe=False)
 
 	flags = b"\x00\x00"
 
