@@ -1,3 +1,12 @@
+# A synchsafe integer uses only 7 bits per byte.
+# The first bit is always 0, so each byte contributes only 7 bits
+# 0xxxxxxx 0xxxxxxx 0xxxxxxx 0xxxxxxx
+# Why synchsafe exists:
+# 	It avoids accidentally creating this byte: 11111111  (0xFF)
+# 	MP3 streams use 0xFF as a frame sync marker
+# 	If your tag size accidentally contains 0xFF, it can confuse MP3 decoders
+# Synchsafe ensures: No byte will ever look like an MP3 frame sync
+
 def decode_synchsafe(data: bytes) -> int:
 	size = 0
 	for b in data:
