@@ -1,3 +1,5 @@
+from struct import unpack
+
 from .buffer import decode_int
 from .text import decode_text
 
@@ -22,13 +24,13 @@ def parse_header(data: bytes):
 	# flags:      1 byte  - bitwise indicator
 	# size:       4 bytes - total size of the tag, excluding 10 byte header
 
-	if data[:3] != b"ID3":
+	if len(data) < 10:
+		raise Exception("ID3 header data too short")
+
+	identifier, version, revision, flags, size_bytes = unpack('>3sBBB4s', data)
+	if identifier != b"ID3":
 		raise Exception("Missing ID3 identifier")
 
-	version = data[3]
-	revision = data[4]
-	flags = data[5]
-	size_bytes = data[6:10]
 	size = decode_int(size_bytes, synchsafe=True)
 
 	return {
