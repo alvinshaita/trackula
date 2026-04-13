@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Union
 
 
 @dataclass
@@ -11,3 +12,6 @@ class TextFrame:
 class UnknownFrame:
     frame_id: str
     raw: bytes
+
+
+Frame = Union[TextFrame, UnknownFrame]
