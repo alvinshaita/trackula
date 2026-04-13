@@ -1,6 +1,14 @@
 from .api import read, write
 from .audiofile import AudioFile
-from .frame import Frame, TextFrame, UnknownFrame
+from .frame import (
+    CommentFrame,
+    Frame,
+    PictureFrame,
+    TextFrame,
+    UnknownFrame,
+    UrlFrame,
+    UserUrlFrame,
+)
 from .tag import Tag
 
 __all__ = [
@@ -10,5 +18,9 @@ __all__ = [
     "AudioFile",
     "Frame",
     "TextFrame",
+    "PictureFrame",
+    "CommentFrame",
+    "UrlFrame",
+    "UserUrlFrame",
     "UnknownFrame",
 ]

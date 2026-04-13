@@ -35,7 +35,7 @@ def test_round_trip_mixed_frames():
         "TIT2": TextFrame("TIT2", "Title"),
         "TPE1": TextFrame("TPE1", "Artist"),
         "TALB": TextFrame("TALB", "Album"),
-        "APIC": UnknownFrame("APIC", b"\x89PNG\r\n\x1a\n"),
+        "PRIV": UnknownFrame("PRIV", b"\x89PNG\r\n\x1a\n"),
     }
     built = build_id3(frames)
     parsed = parse_id3(built)
@@ -43,7 +43,7 @@ def test_round_trip_mixed_frames():
     assert parsed["frames"]["TIT2"].text == "Title"
     assert parsed["frames"]["TPE1"].text == "Artist"
     assert parsed["frames"]["TALB"].text == "Album"
-    assert parsed["frames"]["APIC"].raw == b"\x89PNG\r\n\x1a\n"
+    assert parsed["frames"]["PRIV"].raw == b"\x89PNG\r\n\x1a\n"
 
 
 def test_bad_identifier_raises():
