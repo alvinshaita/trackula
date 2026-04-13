@@ -25,6 +25,7 @@ trackula/
     ├── api.py               # read() / write() entry points
     ├── audiofile.py         # AudioFile class (load / save lifecycle)
     ├── tag.py               # Tag model, friendly frame aliases
+    ├── frame.py             # Frame dataclasses (TextFrame, UnknownFrame, ...)
     ├── errors.py            # ID3Error, InvalidHeaderError
     ├── id3/                 # pure ID3 spec logic (no file I/O)
     │   ├── __init__.py

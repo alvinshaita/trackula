@@ -1,3 +1,4 @@
+from ..frame import TextFrame, UnknownFrame
 from .encoding import decode_text, encode_text
 from .synchsafe import decode_int, encode_int
 
@@ -29,9 +30,12 @@ def parse_frames(data: bytes, version: int) -> dict:
             offset + FRAME_HEADER_SIZE : offset + FRAME_HEADER_SIZE + size
         ]
         if frame_id.startswith("T"):
-            frames[frame_id] = decode_text(frame_data)
+            frames[frame_id] = TextFrame(
+                frame_id=frame_id,
+                text=decode_text(frame_data),
+            )
         else:
-            frames[frame_id] = frame_data
+            frames[frame_id] = UnknownFrame(frame_id=frame_id, raw=frame_data)
 
         offset += FRAME_HEADER_SIZE + size
 
@@ -40,18 +44,20 @@ def parse_frames(data: bytes, version: int) -> dict:
 
 def build_frames(frames: dict, version: int = 4) -> bytes:
     out = b""
-    for frame_id, frame_data in frames.items():
-        out += build_frame(frame_id, frame_data, version=version)
+    for frame in frames.values():
+        out += build_frame(frame, version=version)
     return out
 
 
-def build_frame(frame_id: str, frame_data, version: int = 4) -> bytes:
-    if frame_id.startswith("T"):
-        encoded = encode_text(frame_data, 1)
+def build_frame(frame, version: int = 4) -> bytes:
+    if isinstance(frame, TextFrame):
+        encoded = encode_text(frame.text, 1)
+    elif isinstance(frame, UnknownFrame):
+        encoded = frame.raw
     else:
-        encoded = frame_data
+        raise ValueError(f"Unsupported frame type: {type(frame).__name__}")
 
     size = encode_int(len(encoded), synchsafe=(version == 4))
     flags = b"\x00\x00"
 
-    return frame_id.encode() + size + flags + encoded
+    return frame.frame_id.encode() + size + flags + encoded
