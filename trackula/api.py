@@ -13,6 +13,7 @@ def read(path: str) -> Tag:
 
 
 def write(path: str, tag: Tag) -> None:
+    """Update the ID3 tag of an existing MP3 in place. `path` must exist."""
     _, audio_bytes = split_mp3(path)
     tag_bytes = build_id3(tag.frames)
     write_mp3(path, tag_bytes, audio_bytes)

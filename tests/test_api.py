@@ -81,11 +81,6 @@ class TestAudioFile:
 
         assert AudioFile(str(path)).tag.title == "New"
 
-    @pytest.mark.xfail(
-        reason="api.write() reads audio bytes from the destination path, "
-        "so save(other_path) crashes when dst does not exist and would "
-        "otherwise lose the source audio. Latent design bug in api.write()."
-    )
     def test_save_to_different_path(self, tmp_path):
         src = tmp_path / "src.mp3"
         dst = tmp_path / "dst.mp3"
@@ -95,6 +90,18 @@ class TestAudioFile:
 
         assert dst.exists()
         assert AudioFile(str(dst)).tag.title == "Original"
+
+    def test_save_to_different_path_preserves_audio(self, tmp_path):
+        # regression guard: save(other) must use the source's audio bytes,
+        # not whatever happens to exist at the destination.
+        src = tmp_path / "src.mp3"
+        dst = tmp_path / "dst.mp3"
+        _seed(src, {"TIT2": TextFrame("TIT2", "Source")})
+
+        AudioFile(str(src)).save(str(dst))
+
+        _, audio = split_mp3(str(dst))
+        assert audio == FAKE_AUDIO
 
     def test_repr(self, tmp_path):
         path = tmp_path / "song.mp3"
