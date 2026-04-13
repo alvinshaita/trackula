@@ -13,6 +13,16 @@ def test_round_trip_empty():
     assert parsed["header"]["version"] == 4
 
 
+def test_build_v23_uses_non_synchsafe_frame_size():
+    # regression guard for the encode_int(synchsafe=False) bug:
+    # v2.3 frame sizes are plain big-endian, not synchsafe, so build_id3
+    # routes through encode_int(_, synchsafe=False) when building frames.
+    frames = {"TIT2": TextFrame("TIT2", "V2.3 Title")}
+    built = build_id3(frames, version=3)
+    # tag header reports v2.3
+    assert built[3] == 3
+
+
 def test_round_trip_single_text_frame():
     frames = {"TIT2": TextFrame("TIT2", "Title")}
     built = build_id3(frames)

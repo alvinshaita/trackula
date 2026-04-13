@@ -34,4 +34,4 @@ def encode_int(size: int, synchsafe: bool) -> bytes:
     if synchsafe:
         return encode_synchsafe(size)
     else:
-        return len(size).to_bytes(4, "big")
+        return size.to_bytes(4, "big")

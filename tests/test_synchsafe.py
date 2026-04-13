@@ -50,9 +50,10 @@ class TestEncodeInt:
     def test_synchsafe_mode(self):
         assert encode_int(128, synchsafe=True) == b"\x00\x00\x01\x00"
 
-    @pytest.mark.xfail(
-        reason="encode_int(synchsafe=False) has a latent bug: "
-        "calls len() on an int. Currently unreachable from callers."
-    )
     def test_big_endian_mode(self):
         assert encode_int(256, synchsafe=False) == b"\x00\x00\x01\x00"
+
+    def test_big_endian_round_trip(self):
+        # decode_int(encode_int(n)) == n for both modes
+        for value in [0, 1, 255, 256, 65535, 1000000]:
+            assert decode_int(encode_int(value, synchsafe=False), synchsafe=False) == value
