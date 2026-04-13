@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "trackula"
+version = "0.1.0"
+description = "A small library for reading and writing ID3 tags."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/trackula"]
