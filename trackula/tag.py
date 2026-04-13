@@ -1,3 +1,5 @@
+from .frame import TextFrame
+
 FRIENDLY_NAMES = {
     "TIT2": "title",
     "TPE1": "artist",
@@ -28,10 +30,16 @@ class Tag:
 
 def _make_property(frame_id):
     def getter(self):
-        return self.frames.get(frame_id)
+        frame = self.frames.get(frame_id)
+        if isinstance(frame, TextFrame):
+            return frame.text
+        return frame
 
     def setter(self, value):
-        self.frames[frame_id] = value
+        if isinstance(value, str):
+            self.frames[frame_id] = TextFrame(frame_id=frame_id, text=value)
+        else:
+            self.frames[frame_id] = value
 
     return property(getter, setter)
 
