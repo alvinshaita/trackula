@@ -11,9 +11,9 @@ class TestBuildFrame:
         assert result[:4] == b"TIT2"
 
     def test_unknown_frame_preserves_raw(self):
-        frame = UnknownFrame(frame_id="APIC", raw=b"\xff\xd8\xff\xe0")
+        frame = UnknownFrame(frame_id="PRIV", raw=b"\xff\xd8\xff\xe0")
         result = build_frame(frame, version=4)
-        assert result[:4] == b"APIC"
+        assert result[:4] == b"PRIV"
         assert result[-4:] == b"\xff\xd8\xff\xe0"
 
     def test_rejects_unsupported_type(self):
@@ -40,11 +40,11 @@ class TestParseFrames:
 
     def test_parse_unknown_frame(self):
         built = build_frames(
-            {"APIC": UnknownFrame("APIC", b"\xff\xfe\xfd")}, version=4
+            {"PRIV": UnknownFrame("PRIV", b"\xff\xfe\xfd")}, version=4
         )
         parsed = parse_frames(built, version=4)
-        assert isinstance(parsed["APIC"], UnknownFrame)
-        assert parsed["APIC"].raw == b"\xff\xfe\xfd"
+        assert isinstance(parsed["PRIV"], UnknownFrame)
+        assert parsed["PRIV"].raw == b"\xff\xfe\xfd"
 
     def test_stops_at_padding(self):
         built = build_frames({"TIT2": TextFrame("TIT2", "X")}, version=4)
@@ -58,7 +58,7 @@ def test_round_trip_multiple_frames():
         "TIT2": TextFrame("TIT2", "Song Title"),
         "TPE1": TextFrame("TPE1", "Artist Name"),
         "TALB": TextFrame("TALB", "Album Name"),
-        "APIC": UnknownFrame("APIC", b"\xff\xd8\xff\xe0\x00\x10"),
+        "PRIV": UnknownFrame("PRIV", b"\xff\xd8\xff\xe0\x00\x10"),
     }
     built = build_frames(frames, version=4)
     parsed = parse_frames(built, version=4)
@@ -67,4 +67,4 @@ def test_round_trip_multiple_frames():
     assert parsed["TIT2"].text == "Song Title"
     assert parsed["TPE1"].text == "Artist Name"
     assert parsed["TALB"].text == "Album Name"
-    assert parsed["APIC"].raw == b"\xff\xd8\xff\xe0\x00\x10"
+    assert parsed["PRIV"].raw == b"\xff\xd8\xff\xe0\x00\x10"
