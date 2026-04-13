@@ -10,5 +10,12 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["trackula"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
