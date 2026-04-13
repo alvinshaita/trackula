@@ -1,4 +1,6 @@
-from .frame import TextFrame
+from typing import Dict, Optional
+
+from .frame import Frame, TextFrame
 
 FRIENDLY_NAMES = {
     "TIT2": "title",
@@ -18,8 +20,8 @@ FRIENDLY_NAMES = {
 
 
 class Tag:
-    def __init__(self, frames=None):
-        self.frames = frames or {}
+    def __init__(self, frames: Optional[Dict[str, Frame]] = None):
+        self.frames: Dict[str, Frame] = frames or {}
 
     def get(self, key):
         return self.frames.get(key)
@@ -44,7 +46,11 @@ def _make_property(frame_id):
     return property(getter, setter)
 
 
-for _frame_id, _friendly in FRIENDLY_NAMES.items():
-    _prop = _make_property(_frame_id)
-    setattr(Tag, _frame_id, _prop)
-    setattr(Tag, _friendly, _prop)
+def _install_accessors() -> None:
+    for frame_id, friendly in FRIENDLY_NAMES.items():
+        prop = _make_property(frame_id)
+        setattr(Tag, frame_id, prop)
+        setattr(Tag, friendly, prop)
+
+
+_install_accessors()

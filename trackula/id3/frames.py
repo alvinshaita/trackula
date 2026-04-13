@@ -1,18 +1,20 @@
-from ..frame import TextFrame, UnknownFrame
+from typing import Dict
+
+from ..frame import Frame, TextFrame, UnknownFrame
 from .encoding import decode_text, encode_text
 from .synchsafe import decode_int, encode_int
 
 FRAME_HEADER_SIZE = 10
 
 
-def parse_frames(data: bytes, version: int) -> dict:
+def parse_frames(data: bytes, version: int) -> Dict[str, Frame]:
     # each frame consists of a frame header followed by the actual frame data
     # frame header (10 bytes in v2.3 and v2.4)
     # frame id: 4 bytes - unique identifier eg. TIT2 (Title), TPE1 (Artist)
     # size:     4 bytes - size of the data part of the frame, excluding header
     # flags:    2 bytes - compression, encryption, or read-only status
 
-    frames = {}
+    frames: Dict[str, Frame] = {}
     offset = 0
     length = len(data)
 
@@ -42,14 +44,14 @@ def parse_frames(data: bytes, version: int) -> dict:
     return frames
 
 
-def build_frames(frames: dict, version: int = 4) -> bytes:
+def build_frames(frames: Dict[str, Frame], version: int = 4) -> bytes:
     out = b""
     for frame in frames.values():
         out += build_frame(frame, version=version)
     return out
 
 
-def build_frame(frame, version: int = 4) -> bytes:
+def build_frame(frame: Frame, version: int = 4) -> bytes:
     if isinstance(frame, TextFrame):
         encoded = encode_text(frame.text, 1)
     elif isinstance(frame, UnknownFrame):
