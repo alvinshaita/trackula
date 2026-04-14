@@ -48,8 +48,7 @@ class TestWrite:
         tag.title = "Whatever"
         write(str(path), tag)
 
-        _, audio = split_mp3(str(path))
-        assert audio == FAKE_AUDIO
+        assert split_mp3(str(path)).audio == FAKE_AUDIO
 
     def test_replaces_existing_tag(self, tmp_path):
         path = tmp_path / "song.mp3"
@@ -100,8 +99,7 @@ class TestAudioFile:
 
         AudioFile(str(src)).save(str(dst))
 
-        _, audio = split_mp3(str(dst))
-        assert audio == FAKE_AUDIO
+        assert split_mp3(str(dst)).audio == FAKE_AUDIO
 
     def test_repr(self, tmp_path):
         path = tmp_path / "song.mp3"

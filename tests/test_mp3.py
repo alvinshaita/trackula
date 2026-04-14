@@ -14,17 +14,19 @@ class TestSplitMp3:
         path = tmp_path / "song.mp3"
         path.write_bytes(_make_mp3_bytes({"TIT2": TextFrame("TIT2", "Hello")}))
 
-        tag_bytes, audio_bytes = split_mp3(str(path))
-        assert tag_bytes[:3] == b"ID3"
-        assert audio_bytes == FAKE_AUDIO
+        split = split_mp3(str(path))
+        assert split.v2_tag[:3] == b"ID3"
+        assert split.audio == FAKE_AUDIO
+        assert split.v1_tag == b""
 
     def test_file_without_tag(self, tmp_path):
         path = tmp_path / "song.mp3"
         path.write_bytes(FAKE_AUDIO)
 
-        tag_bytes, audio_bytes = split_mp3(str(path))
-        assert tag_bytes == b""
-        assert audio_bytes == FAKE_AUDIO
+        split = split_mp3(str(path))
+        assert split.v2_tag == b""
+        assert split.audio == FAKE_AUDIO
+        assert split.v1_tag == b""
 
 
 class TestWriteMp3:
@@ -45,9 +47,9 @@ def test_split_then_write_preserves_audio(tmp_path):
     frames = {"TIT2": TextFrame("TIT2", "Round Trip")}
     path.write_bytes(_make_mp3_bytes(frames))
 
-    tag_bytes, audio_bytes = split_mp3(str(path))
-    write_mp3(str(path), tag_bytes, audio_bytes)
+    split = split_mp3(str(path))
+    write_mp3(str(path), split.v2_tag, split.audio)
 
-    tag_bytes2, audio_bytes2 = split_mp3(str(path))
-    assert audio_bytes2 == FAKE_AUDIO
-    assert tag_bytes2 == tag_bytes
+    split2 = split_mp3(str(path))
+    assert split2.audio == FAKE_AUDIO
+    assert split2.v2_tag == split.v2_tag
