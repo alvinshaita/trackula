@@ -1,6 +1,5 @@
 import pytest
 
-from trackula.errors import InvalidHeaderError
 from trackula.frame import TextFrame
 from trackula.id3.frames import build_frame
 from trackula.id3.parser import parse_id3
@@ -143,25 +142,66 @@ class TestNoExtendedHeader:
         assert parsed["frames"]["TIT2"].text == "Hello"
 
 
-class TestMalformedExtendedHeader:
-    def test_truncated_raises(self):
-        # Flag is set but the tag body is only 2 bytes — not enough for the
-        # 4-byte size field.
+class TestStaleExtendedHeaderFlag:
+    """Scenarios where the flag is set but the bytes don't actually form an
+    extended header. trackula recovers by treating the flag as stale and
+    parsing content from offset 0 rather than raising."""
+
+    def test_frames_begin_immediately_after_stale_flag_v24(self):
+        # A buggy tagger set the flag but didn't write the extended header.
+        # content[:4] is really the frame id of the first frame.
+        frame_bytes = build_frame(TextFrame("TIT2", "Hello"), version=4)
+        tag = _wrap_tag(4, EXT_HEADER_FLAG, frame_bytes)
+
+        parsed = parse_id3(tag)
+        assert parsed["frames"]["TIT2"].text == "Hello"
+
+    def test_frames_begin_immediately_after_stale_flag_v23(self):
+        frame_bytes = build_frame(TextFrame("TPE1", "Artist"), version=3)
+        tag = _wrap_tag(3, EXT_HEADER_FLAG, frame_bytes)
+
+        parsed = parse_id3(tag)
+        assert parsed["frames"]["TPE1"].text == "Artist"
+
+    def test_multi_frame_recovery_when_flag_is_stale(self):
+        frame_bytes = (
+            build_frame(TextFrame("TIT2", "Title"), version=4)
+            + build_frame(TextFrame("TPE1", "Artist"), version=4)
+            + build_frame(TextFrame("TALB", "Album"), version=4)
+        )
+        tag = _wrap_tag(4, EXT_HEADER_FLAG, frame_bytes)
+
+        parsed = parse_id3(tag)
+        assert parsed["frames"]["TIT2"].text == "Title"
+        assert parsed["frames"]["TPE1"].text == "Artist"
+        assert parsed["frames"]["TALB"].text == "Album"
+
+    def test_truncated_content_falls_back_gracefully(self):
+        # Flag set but content too short for the 4-byte size field.
+        # Should not crash — treat the flag as stale, parse empty content.
         tag = _wrap_tag(4, EXT_HEADER_FLAG, b"\x00\x00")
-        with pytest.raises(InvalidHeaderError, match="Extended header"):
-            parse_id3(tag)
+        parsed = parse_id3(tag)
+        assert len(parsed["frames"]) == 0
 
-    def test_size_exceeds_tag_raises(self):
-        # Ext header claims it's 100 bytes long but the whole tag body is 10.
-        bogus_ext = encode_synchsafe(100) + b"\x01" + b"\x00" + b"\x00" * 4
-        tag = _wrap_tag(4, EXT_HEADER_FLAG, bogus_ext)
-        with pytest.raises(InvalidHeaderError, match="exceeds"):
-            parse_id3(tag)
+    def test_size_below_minimum_falls_back(self):
+        # v2.4 ext header minimum is 6 bytes. Claim 2.
+        content = encode_synchsafe(2) + b"\x00\x00\x00\x00"
+        tag = _wrap_tag(4, EXT_HEADER_FLAG, content)
+        parsed = parse_id3(tag)
+        # Falls back to parsing content as frames. The bytes don't form
+        # a valid frame, so we get an empty result — but no crash.
+        assert len(parsed["frames"]) == 0
 
-    def test_v23_size_exceeds_tag_raises(self):
-        # v2.3: 4 bytes big-endian size = 100, so actual claimed length = 104
-        # but tag body is only 6 bytes.
-        bogus_ext = (100).to_bytes(4, "big") + b"\x00\x00"
-        tag = _wrap_tag(3, EXT_HEADER_FLAG, bogus_ext)
-        with pytest.raises(InvalidHeaderError, match="exceeds"):
-            parse_id3(tag)
+    def test_size_exceeds_content_falls_back_v24(self):
+        # Claim 100-byte ext header in a short content body. 4 bytes is
+        # below the frame header size, so parse_frames finds nothing.
+        bogus = encode_synchsafe(100)
+        tag = _wrap_tag(4, EXT_HEADER_FLAG, bogus)
+        parsed = parse_id3(tag)
+        assert len(parsed["frames"]) == 0
+
+    def test_size_exceeds_content_falls_back_v23(self):
+        bogus = (100).to_bytes(4, "big") + b"\x00\x00"
+        tag = _wrap_tag(3, EXT_HEADER_FLAG, bogus)
+        parsed = parse_id3(tag)
+        assert len(parsed["frames"]) == 0
