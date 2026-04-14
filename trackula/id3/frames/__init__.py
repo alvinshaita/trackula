@@ -1,8 +1,9 @@
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, Iterable
 
 from ...frame import (
     CommentFrame,
     Frame,
+    FrameCollection,
     PictureFrame,
     TextFrame,
     UnknownFrame,
@@ -40,17 +41,13 @@ def _lookup_parser(frame_id: str) -> ParseFn:
     return parse_unknown
 
 
-def parse_frames(data: bytes, version: int) -> Dict[str, Frame]:
+def parse_frames(data: bytes, version: int) -> FrameCollection:
     # each frame consists of a frame header followed by the actual frame data
     # frame header (10 bytes in v2.3 and v2.4)
     # frame id: 4 bytes - unique identifier eg. TIT2 (Title), TPE1 (Artist)
     # size:     4 bytes - size of the data part of the frame, excluding header
     # flags:    2 bytes - compression, encryption, or read-only status
-    #
-    # NOTE: multiple frames with the same id (COMM, WXXX, APIC with different
-    # descriptors) can legally coexist in a tag. For now we store one per id
-    # and last-one-wins; multi-frame support is a future refactor.
-    frames: Dict[str, Frame] = {}
+    frames = FrameCollection()
     offset = 0
     length = len(data)
 
@@ -69,16 +66,26 @@ def parse_frames(data: bytes, version: int) -> Dict[str, Frame]:
         ]
 
         parser = _lookup_parser(frame_id)
-        frames[frame_id] = parser(frame_id, frame_data)
+        frames.add(parser(frame_id, frame_data))
 
         offset += FRAME_HEADER_SIZE + size
 
     return frames
 
 
-def build_frames(frames: Dict[str, Frame], version: int = 4) -> bytes:
+def build_frames(frames, version: int = 4) -> bytes:
+    """Build a sequence of frames from any iterable of Frame instances.
+
+    Accepts FrameCollection, list[Frame], or {id: Frame} dicts (for backward
+    compatibility with callers that still pass dicts).
+    """
+    if isinstance(frames, dict):
+        frame_iter: Iterable[Frame] = frames.values()
+    else:
+        frame_iter = frames
+
     out = b""
-    for frame in frames.values():
+    for frame in frame_iter:
         out += build_frame(frame, version=version)
     return out
 

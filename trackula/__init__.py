@@ -3,6 +3,7 @@ from .audiofile import AudioFile
 from .frame import (
     CommentFrame,
     Frame,
+    FrameCollection,
     PictureFrame,
     TextFrame,
     UnknownFrame,
@@ -17,6 +18,7 @@ __all__ = [
     "Tag",
     "AudioFile",
     "Frame",
+    "FrameCollection",
     "TextFrame",
     "PictureFrame",
     "CommentFrame",

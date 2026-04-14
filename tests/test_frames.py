@@ -28,7 +28,7 @@ class TestBuildFrame:
 
 class TestParseFrames:
     def test_parse_empty(self):
-        assert parse_frames(b"", version=4) == {}
+        assert len(parse_frames(b"", version=4)) == 0
 
     def test_parse_text_frame(self):
         built = build_frames({"TIT2": TextFrame("TIT2", "Hello")}, version=4)

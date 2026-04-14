@@ -1,6 +1,6 @@
-from typing import Dict, Optional
+from typing import Iterable, Optional, Union
 
-from .frame import Frame, TextFrame
+from .frame import Frame, FrameCollection, TextFrame
 
 FRIENDLY_NAMES = {
     "TIT2": "title",
@@ -20,8 +20,19 @@ FRIENDLY_NAMES = {
 
 
 class Tag:
-    def __init__(self, frames: Optional[Dict[str, Frame]] = None):
-        self.frames: Dict[str, Frame] = frames or {}
+    def __init__(
+        self,
+        frames: Optional[Union[FrameCollection, Iterable[Frame], dict]] = None,
+    ):
+        if frames is None:
+            self.frames = FrameCollection()
+        elif isinstance(frames, FrameCollection):
+            self.frames = frames
+        elif isinstance(frames, dict):
+            # Backward compat for callers that pass {id: frame} dicts.
+            self.frames = FrameCollection(frames.values())
+        else:
+            self.frames = FrameCollection(frames)
 
     def get(self, key):
         return self.frames.get(key)

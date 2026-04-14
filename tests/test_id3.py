@@ -9,7 +9,7 @@ from trackula.id3.parser import parse_id3
 def test_round_trip_empty():
     built = build_id3({})
     parsed = parse_id3(built)
-    assert parsed["frames"] == {}
+    assert len(parsed["frames"]) == 0
     assert parsed["header"]["version"] == 4
 
 

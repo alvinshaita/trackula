@@ -10,7 +10,7 @@ class AudioFile:
     def __init__(self, path: str):
         self.path = path
         tag_bytes, self._audio_bytes = split_mp3(path)
-        frames = parse_id3(tag_bytes)["frames"] if tag_bytes else {}
+        frames = parse_id3(tag_bytes)["frames"] if tag_bytes else None
         self.tag = Tag(frames)
 
     def save(self, output: Optional[str] = None) -> None:

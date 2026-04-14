@@ -4,7 +4,7 @@ from trackula.tag import Tag
 
 class TestEmptyTag:
     def test_default_frames(self):
-        assert Tag().frames == {}
+        assert len(Tag().frames) == 0
 
     def test_default_friendly_accessor(self):
         assert Tag().title is None
