@@ -4,18 +4,36 @@ from ...frame import (
     CommentFrame,
     Frame,
     FrameCollection,
+    GeneralObjectFrame,
+    LyricsFrame,
     PictureFrame,
+    PlayCountFrame,
+    PopularimeterFrame,
+    SyncedLyricsFrame,
     TextFrame,
+    UniqueFileIdentifierFrame,
     UnknownFrame,
     UrlFrame,
+    UserTextFrame,
     UserUrlFrame,
 )
 from ..synchsafe import decode_int, encode_int
 from .comment import build_comment, parse_comment
+from .geob import build_general_object, parse_general_object
+from .lyrics import (
+    build_lyrics,
+    build_synced_lyrics,
+    parse_lyrics,
+    parse_synced_lyrics,
+)
+from .pcnt import build_play_count, parse_play_count
 from .picture import build_picture, parse_picture
+from .popm import build_popularimeter, parse_popularimeter
 from .text import build_text, parse_text
+from .ufid import build_ufid, parse_ufid
 from .unknown import build_unknown, parse_unknown
 from .url import build_url, build_user_url, parse_url, parse_user_url
+from .user_text import build_user_text, parse_user_text
 
 FRAME_HEADER_SIZE = 10
 
@@ -25,6 +43,13 @@ ParseFn = Callable[[str, bytes], Frame]
 _EXACT_PARSERS: Dict[str, ParseFn] = {
     "APIC": parse_picture,
     "COMM": parse_comment,
+    "GEOB": parse_general_object,
+    "PCNT": parse_play_count,
+    "POPM": parse_popularimeter,
+    "SYLT": parse_synced_lyrics,
+    "TXXX": parse_user_text,
+    "UFID": parse_ufid,
+    "USLT": parse_lyrics,
     "WXXX": parse_user_url,
 }
 
@@ -32,10 +57,10 @@ _EXACT_PARSERS: Dict[str, ParseFn] = {
 def _lookup_parser(frame_id: str) -> ParseFn:
     if frame_id in _EXACT_PARSERS:
         return _EXACT_PARSERS[frame_id]
-    # Text frames: T??? except TXXX (user-defined, treated as unknown for now)
+    # Text frames: T??? except TXXX (handled in the exact registry above).
     if frame_id.startswith("T") and frame_id != "TXXX":
         return parse_text
-    # URL frames: W??? except WXXX (handled above)
+    # URL frames: W??? except WXXX (handled in the exact registry above).
     if frame_id.startswith("W"):
         return parse_url
     return parse_unknown
@@ -90,23 +115,31 @@ def build_frames(frames, version: int = 4) -> bytes:
     return out
 
 
+# Type-to-builder lookup. Used by build_frame so that adding a new frame type
+# is one entry here plus the parser registration above, rather than growing an
+# isinstance chain.
+_BUILDERS = {
+    TextFrame: build_text,
+    UserTextFrame: build_user_text,
+    PictureFrame: build_picture,
+    CommentFrame: build_comment,
+    LyricsFrame: build_lyrics,
+    SyncedLyricsFrame: build_synced_lyrics,
+    PopularimeterFrame: build_popularimeter,
+    UniqueFileIdentifierFrame: build_ufid,
+    PlayCountFrame: build_play_count,
+    GeneralObjectFrame: build_general_object,
+    UserUrlFrame: build_user_url,
+    UrlFrame: build_url,
+    UnknownFrame: build_unknown,
+}
+
+
 def build_frame(frame: Frame, version: int = 4) -> bytes:
-    # Dispatch on the concrete Frame type — the dataclass carries its own
-    # identity, which is more robust than dispatching on frame_id.
-    if isinstance(frame, TextFrame):
-        encoded = build_text(frame)
-    elif isinstance(frame, PictureFrame):
-        encoded = build_picture(frame)
-    elif isinstance(frame, CommentFrame):
-        encoded = build_comment(frame)
-    elif isinstance(frame, UserUrlFrame):
-        encoded = build_user_url(frame)
-    elif isinstance(frame, UrlFrame):
-        encoded = build_url(frame)
-    elif isinstance(frame, UnknownFrame):
-        encoded = build_unknown(frame)
-    else:
+    builder = _BUILDERS.get(type(frame))
+    if builder is None:
         raise ValueError(f"Unsupported frame type: {type(frame).__name__}")
+    encoded = builder(frame)
 
     size = encode_int(len(encoded), synchsafe=(version == 4))
     flags = b"\x00\x00"

@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable, Iterator, List, Optional, Tuple, Union
 
 _MIME_TO_EXTENSION = {
@@ -104,6 +104,74 @@ class CommentFrame:
 
 
 @dataclass
+class LyricsFrame:
+    """USLT — unsynchronised lyric / text transcription. Same shape as COMM."""
+    frame_id: str
+    language: str
+    description: str
+    text: str
+
+
+@dataclass
+class SyncedLyricsEntry:
+    text: str
+    timestamp: int
+
+
+@dataclass
+class SyncedLyricsFrame:
+    """SYLT — synchronised lyrics with timestamped text entries."""
+    frame_id: str
+    language: str
+    timestamp_format: int  # 1 = MPEG frames, 2 = milliseconds
+    content_type: int  # 0=other, 1=lyrics, 2=transcription, 3=movement, ...
+    description: str
+    entries: List[SyncedLyricsEntry] = field(default_factory=list)
+
+
+@dataclass
+class UserTextFrame:
+    """TXXX — user-defined text information. Description + value."""
+    frame_id: str
+    description: str
+    text: str
+
+
+@dataclass
+class PopularimeterFrame:
+    """POPM — popularimeter. Per-user rating and play counter."""
+    frame_id: str
+    email: str
+    rating: int  # 0 = unknown, 1..255 = rating value
+    counter: int
+
+
+@dataclass
+class UniqueFileIdentifierFrame:
+    """UFID — unique file identifier. Owner URL + binary identifier."""
+    frame_id: str
+    owner: str
+    identifier: bytes
+
+
+@dataclass
+class PlayCountFrame:
+    """PCNT — plain integer play counter."""
+    frame_id: str
+    count: int
+
+
+@dataclass
+class GeneralObjectFrame:
+    """GEOB — general encapsulated object. Arbitrary binary with metadata."""
+    frame_id: str
+    mime: str
+    filename: str
+    description: str
+    data: bytes
+
+
+@dataclass
 class UrlFrame:
     frame_id: str
     url: str
@@ -124,8 +192,15 @@ class UnknownFrame:
 
 Frame = Union[
     TextFrame,
+    UserTextFrame,
     PictureFrame,
     CommentFrame,
+    LyricsFrame,
+    SyncedLyricsFrame,
+    PopularimeterFrame,
+    UniqueFileIdentifierFrame,
+    PlayCountFrame,
+    GeneralObjectFrame,
     UrlFrame,
     UserUrlFrame,
     UnknownFrame,
