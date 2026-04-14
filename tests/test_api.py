@@ -26,7 +26,7 @@ class TestRead:
 
         tag = read(str(path))
         assert isinstance(tag, Tag)
-        assert tag.frames == {}
+        assert len(tag.frames) == 0
 
 
 class TestWrite:
