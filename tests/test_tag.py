@@ -1,4 +1,10 @@
-from trackula.frame import TextFrame, UnknownFrame
+from trackula.frame import (
+    CommentFrame,
+    GeneralObjectFrame,
+    PictureFrame,
+    TextFrame,
+    UnknownFrame,
+)
 from trackula.tag import Tag
 
 
@@ -78,3 +84,98 @@ class TestTagConstructor:
         frames = {"TIT2": TextFrame("TIT2", "Hello")}
         t = Tag(frames)
         assert t.title == "Hello"
+
+
+class TestSummary:
+    def test_empty_tag(self):
+        assert Tag().summary() == []
+
+    def test_text_frame_shown_in_full(self):
+        t = Tag()
+        t.frames["TIT2"] = TextFrame("TIT2", "Hello")
+        assert t.summary() == [{"frame_id": "TIT2", "text": "Hello"}]
+
+    def test_one_entry_per_frame_in_order(self):
+        t = Tag()
+        t.frames.add(TextFrame("TIT2", "Song"))
+        t.frames.add(TextFrame("TPE1", "Artist"))
+        t.frames.add(TextFrame("TALB", "Album"))
+        ids = [entry["frame_id"] for entry in t.summary()]
+        assert ids == ["TIT2", "TPE1", "TALB"]
+
+    def test_multiple_frames_with_same_id_each_appear(self):
+        t = Tag()
+        t.frames.add(CommentFrame("COMM", "eng", "", "English note"))
+        t.frames.add(CommentFrame("COMM", "spa", "", "Nota"))
+        summary = t.summary()
+        assert len(summary) == 2
+        assert summary[0]["language"] == "eng"
+        assert summary[1]["language"] == "spa"
+
+    def test_picture_data_is_elided(self):
+        t = Tag()
+        t.frames["APIC"] = PictureFrame(
+            frame_id="APIC",
+            mime="image/jpeg",
+            picture_type=3,
+            description="cover",
+            data=b"\xff\xd8" + b"\x00" * 10_000,
+        )
+        [entry] = t.summary()
+        assert entry == {
+            "frame_id": "APIC",
+            "mime": "image/jpeg",
+            "picture_type": 3,
+            "description": "cover",
+            "data": "...",
+        }
+
+    def test_geob_short_data_is_shown(self):
+        t = Tag()
+        t.frames["GEOB"] = GeneralObjectFrame(
+            frame_id="GEOB",
+            mime="text/plain",
+            filename="note.txt",
+            description="note",
+            data=b"hello",
+        )
+        [entry] = t.summary()
+        assert entry["data"] == b"hello"
+
+    def test_geob_boundary_at_50_bytes_is_shown(self):
+        t = Tag()
+        payload = b"x" * 50
+        t.frames["GEOB"] = GeneralObjectFrame(
+            frame_id="GEOB",
+            mime="application/octet-stream",
+            filename="",
+            description="",
+            data=payload,
+        )
+        [entry] = t.summary()
+        assert entry["data"] == payload
+
+    def test_geob_long_data_is_elided(self):
+        t = Tag()
+        t.frames["GEOB"] = GeneralObjectFrame(
+            frame_id="GEOB",
+            mime="application/octet-stream",
+            filename="big.bin",
+            description="big",
+            data=b"x" * 51,
+        )
+        [entry] = t.summary()
+        assert entry == {
+            "frame_id": "GEOB",
+            "mime": "application/octet-stream",
+            "filename": "big.bin",
+            "description": "big",
+            "data": "...",
+        }
+
+    def test_unknown_frame_raw_not_elided(self):
+        # Only APIC + GEOB are special-cased. Other frames are shown as-is.
+        t = Tag()
+        t.frames["XYZZ"] = UnknownFrame("XYZZ", b"\x00\x01\x02")
+        [entry] = t.summary()
+        assert entry == {"frame_id": "XYZZ", "raw": b"\x00\x01\x02"}
