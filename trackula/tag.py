@@ -1,6 +1,9 @@
-from typing import Iterable, Optional, Union
+from dataclasses import fields
+from typing import Iterable, List, Optional, Union
 
-from .frame import Frame, FrameCollection, TextFrame
+from .frame import Frame, FrameCollection, GeneralObjectFrame, PictureFrame, TextFrame
+
+GEOB_DATA_PREVIEW_LIMIT = 50
 
 FRIENDLY_NAMES = {
     "TIT2": "title",
@@ -39,6 +42,37 @@ class Tag:
 
     def set(self, key, value):
         self.frames[key] = value
+
+    def summary(self) -> List[dict]:
+        """Return one dict per frame describing every tag on the track.
+
+        Each dict carries every dataclass field of the frame, in declaration
+        order, so frames with the same id (multiple COMM, multiple APIC)
+        still show up as distinct entries. Binary payloads that would spam
+        the terminal are elided:
+
+        - APIC: `data` is always replaced with `"..."`.
+        - GEOB: `data` is replaced with `"..."` only when longer than
+          GEOB_DATA_PREVIEW_LIMIT bytes; short payloads are shown as-is.
+        """
+        return [_frame_summary(frame) for frame in self.frames]
+
+
+def _frame_summary(frame: Frame) -> dict:
+    entry = {}
+    for f in fields(frame):
+        value = getattr(frame, f.name)
+        if isinstance(frame, PictureFrame) and f.name == "data":
+            entry[f.name] = "..."
+        elif (
+            isinstance(frame, GeneralObjectFrame)
+            and f.name == "data"
+            and len(value) > GEOB_DATA_PREVIEW_LIMIT
+        ):
+            entry[f.name] = "..."
+        else:
+            entry[f.name] = value
+    return entry
 
 
 def _make_property(frame_id):
