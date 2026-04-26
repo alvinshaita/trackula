@@ -1,6 +1,12 @@
 import pytest
 
-from trackula.frame import TextFrame, UnknownFrame
+from trackula.frame import (
+    FIELD_REPR_LIMIT,
+    GeneralObjectFrame,
+    PictureFrame,
+    TextFrame,
+    UnknownFrame,
+)
 from trackula.id3.frames import build_frame, build_frames, parse_frames
 
 
@@ -51,6 +57,69 @@ class TestParseFrames:
         padded = built + b"\x00" * 20
         parsed = parse_frames(padded, version=4)
         assert list(parsed.keys()) == ["TIT2"]
+
+
+class TestFrameRepr:
+    def test_short_text_frame_shown_in_full(self):
+        r = repr(TextFrame("TIT2", "Hello"))
+        assert r == "TextFrame(frame_id='TIT2', text='Hello')"
+
+    def test_class_name_is_shown(self):
+        assert repr(TextFrame("TIT2", "Hi")).startswith("TextFrame(")
+        assert repr(PictureFrame("APIC", "image/jpeg", 3, "", b"")).startswith(
+            "PictureFrame("
+        )
+
+    def test_long_picture_data_is_truncated(self):
+        frame = PictureFrame(
+            frame_id="APIC",
+            mime="image/jpeg",
+            picture_type=3,
+            description="cover",
+            data=b"\xff\xd8\xff\xe0" + b"\x00" * 5_000,
+        )
+        r = repr(frame)
+        # The full bytes blob never appears, but the short fields still do.
+        assert "..." in r
+        assert "frame_id='APIC'" in r
+        assert "mime='image/jpeg'" in r
+        assert "description='cover'" in r
+        # No single field repr exceeds the limit + ellipsis length.
+        # (50 chars of repr + 3 chars for "..." = 53 max for any field value)
+        for piece in r.split(", "):
+            value_repr = piece.split("=", 1)[-1].rstrip(")")
+            assert len(value_repr) <= FIELD_REPR_LIMIT + 3
+
+    def test_geob_short_data_not_truncated(self):
+        frame = GeneralObjectFrame(
+            frame_id="GEOB",
+            mime="text/plain",
+            filename="note.txt",
+            description="note",
+            data=b"hello",
+        )
+        r = repr(frame)
+        assert "data=b'hello'" in r
+        assert "..." not in r
+
+    def test_geob_long_data_truncated(self):
+        frame = GeneralObjectFrame(
+            frame_id="GEOB",
+            mime="application/octet-stream",
+            filename="big.bin",
+            description="big",
+            data=b"x" * 500,
+        )
+        r = repr(frame)
+        # Original 500-byte payload should not appear in full.
+        assert "x" * 500 not in r
+        assert "..." in r
+
+    def test_unknown_frame_long_raw_truncated(self):
+        frame = UnknownFrame("PRIV", b"\xff" * 200)
+        r = repr(frame)
+        assert "..." in r
+        assert "frame_id='PRIV'" in r
 
 
 def test_round_trip_multiple_frames():

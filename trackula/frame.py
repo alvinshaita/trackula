@@ -1,6 +1,8 @@
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Iterable, Iterator, List, Optional, Tuple, Union
+
+FIELD_REPR_LIMIT = 50
 
 _MIME_TO_EXTENSION = {
     "image/jpeg": "jpg",
@@ -205,6 +207,41 @@ Frame = Union[
     UserUrlFrame,
     UnknownFrame,
 ]
+
+
+def _truncate_field_repr(value: object) -> str:
+    s = repr(value)
+    if len(s) > FIELD_REPR_LIMIT:
+        return s[:FIELD_REPR_LIMIT] + "..."
+    return s
+
+
+def _frame_repr(self) -> str:
+    parts = [
+        f"{f.name}={_truncate_field_repr(getattr(self, f.name))}"
+        for f in fields(self)
+    ]
+    return f"{type(self).__name__}({', '.join(parts)})"
+
+
+for _cls in (
+    TextFrame,
+    UserTextFrame,
+    PictureFrame,
+    CommentFrame,
+    LyricsFrame,
+    SyncedLyricsEntry,
+    SyncedLyricsFrame,
+    PopularimeterFrame,
+    UniqueFileIdentifierFrame,
+    PlayCountFrame,
+    GeneralObjectFrame,
+    UrlFrame,
+    UserUrlFrame,
+    UnknownFrame,
+):
+    _cls.__repr__ = _frame_repr
+del _cls
 
 
 class FrameCollection:
